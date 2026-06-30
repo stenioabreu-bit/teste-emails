@@ -1,0 +1,55 @@
+<!-- Cole isto no lugar da seção de empreendimentos do site público -->
+<section id="empreendimentos">
+  <div id="lista-imoveis"></div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = 'https://xxxxx.supabase.co';   // <- mesmo do admin.html
+const SUPABASE_KEY = 'sua-anon-key-aqui';            // <- mesmo do admin.html
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const TIPO_LABEL = {
+  lancamento: 'Lançamento',
+  em_obras: 'Em obras',
+  pronto: 'Pronto para morar',
+  alto_padrao: 'Alto padrão'
+};
+
+async function renderImoveis(){
+  const container = document.getElementById('lista-imoveis');
+  const { data, error } = await sb
+    .from('imoveis')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error || !data?.length) {
+    container.innerHTML = '<p>Nenhum empreendimento cadastrado.</p>';
+    return;
+  }
+
+  container.innerHTML = data.map(imovel => `
+    <article class="imovel-card">
+      <img src="${imovel.imagens?.[0] || ''}" alt="${imovel.titulo}" loading="lazy">
+      <div class="imovel-info">
+        <span class="imovel-tag">${TIPO_LABEL[imovel.tipo] || imovel.tipo}</span>
+        <h3>${imovel.titulo}</h3>
+        <p>${imovel.bairro || ''}</p>
+        ${imovel.preco ? `<strong>R$ ${imovel.preco.toLocaleString('pt-BR')}</strong>` : ''}
+      </div>
+    </article>
+  `).join('');
+}
+
+renderImoveis();
+</script>
+
+<style>
+#lista-imoveis{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px}
+.imovel-card{background:#fff;border-radius:16px;overflow:hidden;border:1px solid #eee}
+.imovel-card img{width:100%;height:200px;object-fit:cover;background:#f2f2f2}
+.imovel-info{padding:16px}
+.imovel-tag{font-size:12px;color:#00A848;font-weight:600;text-transform:uppercase}
+.imovel-info h3{margin:6px 0 4px;font-size:17px}
+.imovel-info p{margin:0 0 8px;color:#777;font-size:13px}
+</style>

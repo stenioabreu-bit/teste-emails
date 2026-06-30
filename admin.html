@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Admin · Cadastro de Imóveis</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#0f1115; --card:#171a21; --border:#262b35;
+    --text:#e8eaed; --muted:#9aa1ad;
+    --accent:#00D659; --danger:#ef4444;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:900px;margin:0 auto;padding:32px 20px}
+  h1{font-size:20px;margin:0 0 24px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:24px}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+  input,select,textarea{
+    width:100%;padding:10px 12px;background:#0f1115;border:1px solid var(--border);
+    border-radius:8px;color:var(--text);font-size:14px;margin-bottom:14px
+  }
+  textarea{resize:vertical;min-height:70px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+  button{
+    background:var(--accent);color:#04130a;border:none;border-radius:8px;
+    padding:11px 18px;font-weight:600;font-size:14px;cursor:pointer
+  }
+  button.secondary{background:transparent;color:var(--text);border:1px solid var(--border)}
+  button.danger{background:var(--danger);color:#fff}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .row{display:flex;gap:10px;align-items:center}
+  .imoveis-list{display:flex;flex-direction:column;gap:10px}
+  .item{display:flex;gap:12px;align-items:center;background:#0f1115;border:1px solid var(--border);border-radius:10px;padding:10px}
+  .item img{width:64px;height:64px;object-fit:cover;border-radius:8px;background:#222}
+  .item .info{flex:1;min-width:0}
+  .item .info b{display:block;font-size:14px}
+  .item .info span{color:var(--muted);font-size:12px}
+  #login-screen{max-width:360px;margin:80px auto}
+  .hidden{display:none !important}
+  .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+  .msg{font-size:13px;margin-top:-4px;margin-bottom:14px}
+  .msg.error{color:var(--danger)}
+  .msg.ok{color:var(--accent)}
+  .thumb-grid{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .thumb-grid img{width:60px;height:60px;object-fit:cover;border-radius:6px}
+</style>
+</head>
+<body>
+
+<div id="login-screen" class="card">
+  <h1>Entrar</h1>
+  <label>E-mail</label>
+  <input type="email" id="login-email">
+  <label>Senha</label>
+  <input type="password" id="login-senha">
+  <div class="msg error hidden" id="login-msg"></div>
+  <button onclick="login()" style="width:100%">Entrar</button>
+</div>
+
+<div id="app-screen" class="wrap hidden">
+  <div class="top">
+    <h1>Cadastro de Imóveis</h1>
+    <button class="secondary" onclick="logout()">Sair</button>
+  </div>
+
+  <div class="card">
+    <div class="grid2">
+      <div>
+        <label>Título</label>
+        <input id="f-titulo" placeholder="Ed. Aurora Jardins">
+      </div>
+      <div>
+        <label>Tipo</label>
+        <select id="f-tipo">
+          <option value="lancamento">Lançamento</option>
+          <option value="em_obras">Em obras</option>
+          <option value="pronto">Pronto para morar</option>
+          <option value="alto_padrao">Alto padrão</option>
+        </select>
+      </div>
+    </div>
+    <label>Descrição</label>
+    <textarea id="f-descricao"></textarea>
+    <div class="grid2">
+      <div>
+        <label>Bairro</label>
+        <input id="f-bairro" placeholder="Moema">
+      </div>
+      <div>
+        <label>Preço (R$)</label>
+        <input id="f-preco" type="number" placeholder="850000">
+      </div>
+    </div>
+    <div class="grid2">
+      <div>
+        <label>Área (m²)</label>
+        <input id="f-area" type="number" placeholder="78">
+      </div>
+      <div>
+        <label>Quartos / Vagas</label>
+        <div class="row">
+          <input id="f-quartos" type="number" placeholder="2">
+          <input id="f-vagas" type="number" placeholder="1">
+        </div>
+      </div>
+    </div>
+    <label>Fotos</label>
+    <input type="file" id="f-imagens" multiple accept="image/*">
+    <div class="thumb-grid" id="thumb-preview"></div>
+
+    <div class="row">
+      <button onclick="salvarImovel()" id="btn-salvar">Cadastrar imóvel</button>
+      <button class="secondary hidden" id="btn-cancelar" onclick="cancelarEdicao()">Cancelar edição</button>
+    </div>
+    <div class="msg hidden" id="form-msg"></div>
+  </div>
+
+  <div class="card">
+    <h1>Imóveis cadastrados</h1>
+    <div class="imoveis-list" id="lista"></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://kczmulcejmojveiosmie.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_FyuviYtlL8E0vyjeJT1kdw_mB7vwzmp';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let editandoId = null;
+
+async function checarSessao(){
+  const { data } = await sb.auth.getSession();
+  if (data.session) {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app-screen').classList.remove('hidden');
+    carregarImoveis();
+  } else {
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('app-screen').classList.add('hidden');
+  }
+}
+
+async function login(){
+  const email = document.getElementById('login-email').value;
+  const senha = document.getElementById('login-senha').value;
+  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+  const msg = document.getElementById('login-msg');
+  if (error) {
+    msg.textContent = 'E-mail ou senha inválidos.';
+    msg.classList.remove('hidden');
+  } else {
+    checarSessao();
+  }
+}
+
+async function logout(){
+  await sb.auth.signOut();
+  checarSessao();
+}
+
+document.getElementById('f-imagens').addEventListener('change', (e) => {
+  const preview = document.getElementById('thumb-preview');
+  preview.innerHTML = '';
+  [...e.target.files].forEach(file => {
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    preview.appendChild(img);
+  });
+});
+
+async function uploadImagens(files){
+  const urls = [];
+  for (const file of files) {
+    const path = `${Date.now()}-${file.name}`;
+    const { error } = await sb.storage.from('imoveis').upload(path, file);
+    if (error) { alert('Erro no upload: ' + error.message); continue; }
+    const { data } = sb.storage.from('imoveis').getPublicUrl(path);
+    urls.push(data.publicUrl);
+  }
+  return urls;
+}
+
+async function salvarImovel(){
+  const btn = document.getElementById('btn-salvar');
+  const msg = document.getElementById('form-msg');
+  btn.disabled = true;
+  msg.classList.add('hidden');
+
+  const files = document.getElementById('f-imagens').files;
+  const novasUrls = files.length ? await uploadImagens(files) : [];
+
+  const payload = {
+    titulo: document.getElementById('f-titulo').value,
+    tipo: document.getElementById('f-tipo').value,
+    descricao: document.getElementById('f-descricao').value,
+    bairro: document.getElementById('f-bairro').value,
+    preco: Number(document.getElementById('f-preco').value) || null,
+    area: Number(document.getElementById('f-area').value) || null,
+    quartos: Number(document.getElementById('f-quartos').value) || null,
+    vagas: Number(document.getElementById('f-vagas').value) || null,
+  };
+
+  let error;
+  if (editandoId) {
+    if (novasUrls.length) payload.imagens = novasUrls;
+    ({ error } = await sb.from('imoveis').update(payload).eq('id', editandoId));
+  } else {
+    payload.imagens = novasUrls;
+    ({ error } = await sb.from('imoveis').insert(payload));
+  }
+
+  btn.disabled = false;
+  msg.classList.remove('hidden');
+  if (error) {
+    msg.classList.remove('ok'); msg.classList.add('error');
+    msg.textContent = 'Erro ao salvar: ' + error.message;
+  } else {
+    msg.classList.remove('error'); msg.classList.add('ok');
+    msg.textContent = editandoId ? 'Imóvel atualizado.' : 'Imóvel cadastrado.';
+    cancelarEdicao();
+    carregarImoveis();
+  }
+}
+
+function cancelarEdicao(){
+  editandoId = null;
+  document.getElementById('f-titulo').value = '';
+  document.getElementById('f-descricao').value = '';
+  document.getElementById('f-bairro').value = '';
+  document.getElementById('f-preco').value = '';
+  document.getElementById('f-area').value = '';
+  document.getElementById('f-quartos').value = '';
+  document.getElementById('f-vagas').value = '';
+  document.getElementById('f-imagens').value = '';
+  document.getElementById('thumb-preview').innerHTML = '';
+  document.getElementById('btn-salvar').textContent = 'Cadastrar imóvel';
+  document.getElementById('btn-cancelar').classList.add('hidden');
+}
+
+function editarImovel(imovel){
+  editandoId = imovel.id;
+  document.getElementById('f-titulo').value = imovel.titulo || '';
+  document.getElementById('f-tipo').value = imovel.tipo || 'lancamento';
+  document.getElementById('f-descricao').value = imovel.descricao || '';
+  document.getElementById('f-bairro').value = imovel.bairro || '';
+  document.getElementById('f-preco').value = imovel.preco || '';
+  document.getElementById('f-area').value = imovel.area || '';
+  document.getElementById('f-quartos').value = imovel.quartos || '';
+  document.getElementById('f-vagas').value = imovel.vagas || '';
+  document.getElementById('btn-salvar').textContent = 'Salvar alterações';
+  document.getElementById('btn-cancelar').classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function excluirImovel(id){
+  if (!confirm('Excluir este imóvel?')) return;
+  const { error } = await sb.from('imoveis').delete().eq('id', id);
+  if (error) alert('Erro ao excluir: ' + error.message);
+  carregarImoveis();
+}
+
+async function carregarImoveis(){
+  const { data, error } = await sb.from('imoveis').select('*').order('created_at', { ascending: false });
+  const lista = document.getElementById('lista');
+  lista.innerHTML = '';
+  if (error) { lista.textContent = 'Erro ao carregar imóveis.'; return; }
+  if (!data.length) { lista.textContent = 'Nenhum imóvel cadastrado ainda.'; return; }
+
+  data.forEach(imovel => {
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = `
+      <img src="${imovel.imagens?.[0] || ''}" onerror="this.style.visibility='hidden'">
+      <div class="info">
+        <b>${imovel.titulo}</b>
+        <span>${imovel.bairro || ''} · R$ ${imovel.preco ? imovel.preco.toLocaleString('pt-BR') : '-'}</span>
+      </div>
+      <button class="secondary" data-action="editar">Editar</button>
+      <button class="danger" data-action="excluir">Excluir</button>
+    `;
+    div.querySelector('[data-action="editar"]').onclick = () => editarImovel(imovel);
+    div.querySelector('[data-action="excluir"]').onclick = () => excluirImovel(imovel.id);
+    lista.appendChild(div);
+  });
+}
+
+checarSessao();
+</script>
+</body>
+</html>
