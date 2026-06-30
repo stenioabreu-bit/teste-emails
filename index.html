@@ -147,6 +147,50 @@
 
   footer{border-top:1px solid var(--line);padding:40px 0;color:var(--muted);font-size:13px;text-align:center}
   footer a{color:var(--moss);text-decoration:none}
+
+  /* ===== Responsivo ===== */
+  @media(max-width:768px){
+    .wrap{padding:0 20px}
+    .nav{height:62px}
+    .brand{font-size:21px}
+    .brand small{display:none}
+    .nav-cta{padding:9px 16px;font-size:12px}
+    .hero{padding:54px 0 40px}
+    .hero .eyebrow{margin-bottom:16px}
+    .hero p{font-size:16px;margin-top:20px}
+    .hero-meta{gap:28px;margin-top:34px}
+    .hero-meta div .n{font-size:28px}
+    .filters{margin-top:44px;padding:28px 0 22px;gap:8px;
+      flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+      scrollbar-width:none;}
+    .filters::-webkit-scrollbar{display:none}
+    .chip{flex:0 0 auto;white-space:nowrap}
+    .grid{gap:18px;padding-bottom:60px}
+    .modal{padding:0;align-items:flex-end}
+    .modal-card{max-width:100%;max-height:94vh;border-radius:20px 20px 0 0}
+    .modal-card .mimg{aspect-ratio:16/11}
+    .modal-body{padding:22px}
+    .modal-body h2{font-size:25px}
+    .modal-body .price{font-size:24px}
+    .modal-body .specs{gap:20px}
+    .thumbs{padding:12px 22px 0}
+    .mclose{top:12px;right:12px}
+  }
+  @media(max-width:420px){
+    .hero h1{font-size:34px}
+    .hero-meta{gap:20px}
+    .hero-meta div .n{font-size:24px}
+    .card h3{font-size:19px}
+    .modal-body .specs{gap:14px;flex-wrap:wrap}
+  }
+  /* toque: remove hover-lift que "gruda" no mobile */
+  @media(hover:none){
+    .card:hover{transform:none;box-shadow:none}
+    .card:hover .ph img{transform:none}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+  }
 </style>
 </head>
 <body>
