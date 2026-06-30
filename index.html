@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aurora · Lançamentos em São Paulo</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16201b;          /* verde quase preto */
+    --moss:#1f4d3a;         /* verde eucalipto profundo (marca) */
+    --moss-soft:#2d6b50;
+    --sand:#f4f2ec;         /* fundo arejado */
+    --paper:#ffffff;
+    --line:#e3e0d6;
+    --muted:#74786f;
+    --gold:#b08d4f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--sand);color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1200px;margin:0 auto;padding:0 28px}
+
+  /* ---- topo ---- */
+  header{
+    position:sticky;top:0;z-index:50;
+    background:color-mix(in srgb, var(--sand) 88%, transparent);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
+  }
+  .nav{display:flex;align-items:center;justify-content:space-between;height:74px}
+  .brand{display:flex;align-items:baseline;gap:10px;font-family:'Fraunces',serif;font-size:25px;font-weight:600;letter-spacing:-.02em;color:var(--moss)}
+  .brand small{font-family:'Inter';font-size:11px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+  .nav-cta{
+    font-size:13px;font-weight:600;color:var(--paper);background:var(--moss);
+    padding:11px 20px;border-radius:100px;text-decoration:none;transition:background .2s;
+  }
+  .nav-cta:hover{background:var(--moss-soft)}
+
+  /* ---- hero ---- */
+  .hero{padding:88px 0 64px;position:relative}
+  .hero .eyebrow{
+    font-size:12px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--gold);margin-bottom:22px;display:flex;align-items:center;gap:10px;
+  }
+  .hero .eyebrow::before{content:"";width:34px;height:1px;background:var(--gold)}
+  .hero h1{
+    font-family:'Fraunces',serif;font-weight:500;
+    font-size:clamp(40px,7vw,82px);line-height:1.02;letter-spacing:-.025em;
+    max-width:14ch;
+  }
+  .hero h1 em{font-style:italic;color:var(--moss)}
+  .hero p{margin-top:26px;font-size:18px;color:var(--muted);max-width:46ch}
+  .hero-meta{display:flex;gap:40px;margin-top:46px;flex-wrap:wrap}
+  .hero-meta div .n{font-family:'Fraunces',serif;font-size:34px;font-weight:600;color:var(--moss);line-height:1}
+  .hero-meta div .l{font-size:13px;color:var(--muted);margin-top:6px}
+
+  /* ---- filtros ---- */
+  .filters{display:flex;gap:10px;flex-wrap:wrap;padding:40px 0 28px;border-top:1px solid var(--line);margin-top:64px}
+  .chip{
+    font-size:13px;font-weight:500;padding:9px 18px;border-radius:100px;
+    border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer;
+    transition:all .18s;
+  }
+  .chip:hover{border-color:var(--moss)}
+  .chip.active{background:var(--moss);color:var(--paper);border-color:var(--moss)}
+
+  /* ---- grid ---- */
+  .count{font-size:13px;color:var(--muted);margin-bottom:22px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;padding-bottom:90px}
+  @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:600px){.grid{grid-template-columns:1fr}}
+
+  .card{
+    background:var(--paper);border:1px solid var(--line);border-radius:18px;overflow:hidden;
+    display:flex;flex-direction:column;transition:transform .25s, box-shadow .25s;
+  }
+  .card:hover{transform:translateY(-4px);box-shadow:0 18px 40px -22px rgba(22,32,27,.4)}
+  .card .ph{position:relative;aspect-ratio:4/3;background:#dcd9cf;overflow:hidden}
+  .card .ph img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
+  .card:hover .ph img{transform:scale(1.05)}
+  .card .tag{
+    position:absolute;top:14px;left:14px;font-size:11px;font-weight:600;
+    letter-spacing:.04em;text-transform:uppercase;color:var(--ink);
+    background:color-mix(in srgb, var(--paper) 92%, transparent);backdrop-filter:blur(4px);
+    padding:6px 12px;border-radius:100px;
+  }
+  .card .body{padding:20px 20px 22px;display:flex;flex-direction:column;flex:1}
+  .card .bairro{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--gold)}
+  .card h3{font-family:'Fraunces',serif;font-size:21px;font-weight:600;letter-spacing:-.01em;margin:6px 0 10px;line-height:1.15}
+  .card .desc{font-size:14px;color:var(--muted);flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .card .specs{display:flex;gap:16px;margin-top:16px;padding-top:16px;border-top:1px solid var(--line);font-size:13px;color:var(--ink)}
+  .card .specs b{font-weight:600}
+  .card .price{margin-top:16px;font-family:'Fraunces',serif;font-size:23px;font-weight:600;color:var(--moss)}
+  .card .price small{font-family:'Inter';font-size:12px;font-weight:500;color:var(--muted)}
+
+  .empty{
+    grid-column:1/-1;text-align:center;padding:80px 20px;
+    border:1px dashed var(--line);border-radius:18px;color:var(--muted);
+  }
+  .empty h3{font-family:'Fraunces',serif;font-size:24px;color:var(--ink);margin-bottom:8px;font-weight:500}
+
+  /* ---- modal ---- */
+  .modal{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:24px}
+  .modal.open{display:flex}
+  .modal-bg{position:absolute;inset:0;background:rgba(22,32,27,.55);backdrop-filter:blur(3px)}
+  .modal-card{position:relative;background:var(--paper);border-radius:20px;max-width:680px;width:100%;max-height:88vh;overflow:auto}
+  .modal-card .mimg{aspect-ratio:16/10;background:#dcd9cf}
+  .modal-card .mimg img{width:100%;height:100%;object-fit:cover}
+  .modal-body{padding:28px}
+  .modal-body .bairro{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--gold)}
+  .modal-body h2{font-family:'Fraunces',serif;font-size:30px;font-weight:600;margin:8px 0 14px;letter-spacing:-.01em}
+  .modal-body .price{font-family:'Fraunces',serif;font-size:28px;color:var(--moss);font-weight:600;margin-bottom:18px}
+  .modal-body .specs{display:flex;gap:26px;padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:18px}
+  .modal-body .specs .n{font-family:'Fraunces',serif;font-size:22px;font-weight:600}
+  .modal-body .specs .l{font-size:12px;color:var(--muted)}
+  .modal-body p{color:var(--muted);font-size:15px}
+  .mclose{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:100px;border:none;background:var(--paper);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
+  .thumbs{display:flex;gap:8px;padding:14px 28px 0;flex-wrap:wrap}
+  .thumbs img{width:64px;height:64px;object-fit:cover;border-radius:8px;cursor:pointer;border:2px solid transparent}
+  .thumbs img.active{border-color:var(--moss)}
+
+  footer{border-top:1px solid var(--line);padding:40px 0;color:var(--muted);font-size:13px;text-align:center}
+  footer a{color:var(--moss);text-decoration:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <div class="brand">Aurora <small>Lançamentos · SP</small></div>
+    <a class="nav-cta" href="#imoveis">Ver portfólio</a>
+  </div>
+</header>
+
+<section class="hero wrap">
+  <div class="eyebrow">Consultoria imobiliária</div>
+  <h1>O endereço certo <em>antes</em> de todo mundo.</h1>
+  <p>Curadoria de lançamentos e empreendimentos de alto padrão em São Paulo, com acesso às melhores tabelas e condições do mercado.</p>
+  <div class="hero-meta">
+    <div><div class="n" id="m-total">—</div><div class="l">Empreendimentos</div></div>
+    <div><div class="n">15</div><div class="l">Anos de mercado</div></div>
+    <div><div class="n">2k+</div><div class="l">Famílias atendidas</div></div>
+  </div>
+</section>
+
+<section class="wrap" id="imoveis">
+  <div class="filters" id="filtros">
+    <button class="chip active" data-tipo="todos">Todos</button>
+    <button class="chip" data-tipo="lancamento">Lançamentos</button>
+    <button class="chip" data-tipo="em_obras">Em obras</button>
+    <button class="chip" data-tipo="pronto">Prontos para morar</button>
+    <button class="chip" data-tipo="alto_padrao">Alto padrão</button>
+  </div>
+  <div class="count" id="count"></div>
+  <div class="grid" id="grid"></div>
+</section>
+
+<div class="modal" id="modal">
+  <div class="modal-bg" onclick="fecharModal()"></div>
+  <div class="modal-card">
+    <button class="mclose" onclick="fecharModal()">✕</button>
+    <div class="mimg"><img id="m-img" src="" alt=""></div>
+    <div class="thumbs" id="m-thumbs"></div>
+    <div class="modal-body">
+      <div class="bairro" id="m-bairro"></div>
+      <h2 id="m-titulo"></h2>
+      <div class="price" id="m-price"></div>
+      <div class="specs" id="m-specs"></div>
+      <p id="m-desc"></p>
+    </div>
+  </div>
+</div>
+
+<footer class="wrap">
+  Aurora Consultoria Imobiliária · CRECI 52341-J · São Paulo/SP — área de cadastro em <a href="admin.html">/admin</a>
+</footer>
+
+<script>
+const SUPABASE_URL = 'https://kczmulcejmojveiosmie.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_FyuviYtlL8E0vyjeJT1kdw_mB7vwzmp';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const TIPO_LABEL = { lancamento:'Lançamento', em_obras:'Em obras', pronto:'Pronto para morar', alto_padrao:'Alto padrão' };
+let TODOS = [];
+let filtroAtual = 'todos';
+
+const fmtPreco = v => v ? 'R$ ' + Number(v).toLocaleString('pt-BR') : 'Sob consulta';
+
+async function carregar(){
+  const { data, error } = await sb.from('imoveis').select('*').order('created_at', { ascending:false });
+  if (error) { document.getElementById('grid').innerHTML = `<div class="empty"><h3>Não foi possível carregar</h3><p>Tente recarregar a página.</p></div>`; return; }
+  TODOS = data || [];
+  document.getElementById('m-total').textContent = TODOS.length;
+  render();
+}
+
+function render(){
+  const grid = document.getElementById('grid');
+  const lista = filtroAtual === 'todos' ? TODOS : TODOS.filter(i => i.tipo === filtroAtual);
+  document.getElementById('count').textContent =
+    lista.length ? `${lista.length} ${lista.length === 1 ? 'empreendimento' : 'empreendimentos'}` : '';
+
+  if (!lista.length){
+    grid.innerHTML = `<div class="empty"><h3>Nada por aqui ainda</h3><p>Novos empreendimentos aparecem assim que forem cadastrados.</p></div>`;
+    return;
+  }
+
+  grid.innerHTML = lista.map((im, idx) => `
+    <article class="card" onclick="abrirModal(${TODOS.indexOf(im)})">
+      <div class="ph">
+        ${im.imagens?.[0] ? `<img src="${im.imagens[0]}" alt="${im.titulo}" loading="lazy">` : ''}
+        <span class="tag">${TIPO_LABEL[im.tipo] || im.tipo}</span>
+      </div>
+      <div class="body">
+        ${im.bairro ? `<div class="bairro">${im.bairro}</div>` : ''}
+        <h3>${im.titulo}</h3>
+        <div class="desc">${im.descricao || ''}</div>
+        ${(im.quartos || im.area || im.vagas) ? `
+        <div class="specs">
+          ${im.quartos ? `<span><b>${im.quartos}</b> quartos</span>` : ''}
+          ${im.area ? `<span><b>${im.area}</b> m²</span>` : ''}
+          ${im.vagas ? `<span><b>${im.vagas}</b> vagas</span>` : ''}
+        </div>` : ''}
+        <div class="price">${fmtPreco(im.preco)}</div>
+      </div>
+    </article>
+  `).join('');
+}
+
+function abrirModal(i){
+  const im = TODOS[i];
+  document.getElementById('m-bairro').textContent = im.bairro || '';
+  document.getElementById('m-titulo').textContent = im.titulo;
+  document.getElementById('m-price').textContent = fmtPreco(im.preco);
+  document.getElementById('m-desc').textContent = im.descricao || 'Sem descrição.';
+  document.getElementById('m-img').src = im.imagens?.[0] || '';
+
+  document.getElementById('m-specs').innerHTML = `
+    ${im.quartos ? `<div><div class="n">${im.quartos}</div><div class="l">Quartos</div></div>` : ''}
+    ${im.area ? `<div><div class="n">${im.area}</div><div class="l">m²</div></div>` : ''}
+    ${im.vagas ? `<div><div class="n">${im.vagas}</div><div class="l">Vagas</div></div>` : ''}
+  `;
+
+  const thumbs = document.getElementById('m-thumbs');
+  if (im.imagens?.length > 1){
+    thumbs.innerHTML = im.imagens.map((url,idx) =>
+      `<img src="${url}" class="${idx===0?'active':''}" onclick="trocarFoto('${url}', this)">`).join('');
+  } else { thumbs.innerHTML = ''; }
+
+  document.getElementById('modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function trocarFoto(url, el){
+  document.getElementById('m-img').src = url;
+  document.querySelectorAll('#m-thumbs img').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+function fecharModal(){
+  document.getElementById('modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if(e.key==='Escape') fecharModal(); });
+
+document.getElementById('filtros').addEventListener('click', e => {
+  if(!e.target.classList.contains('chip')) return;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  e.target.classList.add('active');
+  filtroAtual = e.target.dataset.tipo;
+  render();
+});
+
+carregar();
+</script>
+</body>
+</html>
